@@ -1,4 +1,4 @@
-seed: 0
+seed: 1
 
 # Wandb
 project: hasee__S5_dev__Associative_recall
@@ -24,14 +24,14 @@ log_interval: 150
 dataset: "icl_synthetics"
 num_examples: 4000
 num_test_examples: 500
-vocab_size: 40
+vocab_size: 10
 copy_method: "assoc_recall"
-input_seq_len: 131072
-l_max: 131074 
+input_seq_len: 20
+l_max: 22
 
 data_kwargs:
     seed: 0
-    batch_size: 16
+    batch_size: 4
     data_dir: ./data
 
 rng_keys: ["dropout"]
@@ -63,7 +63,7 @@ layer_kwargs:
         dt_min: 0.0001
         dt_max: 0.1
         conj_sym: True
-        clip_eigs: True
+        clip_eigs: False
         activation: "half_glu2"
 
 seq_model_kwargs:
