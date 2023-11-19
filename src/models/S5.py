@@ -25,8 +25,8 @@ def discretize_zoh(Lambda, B_tilde, Delta):
     """
     Identity = np.ones(Lambda.shape[0])
     # Lambda_bar = np.exp(Lambda * Delta) # exp
-    # Lambda_bar = Lambda * Delta # direct or no_clip
-    Lambda_bar = 1 - 1 / ((Lambda * Delta) * (Lambda * Delta) + 0.50001) # Best
+    Lambda_bar = Lambda * Delta # direct or no_clip
+    # Lambda_bar = 1 - 1 / ((Lambda * Delta) * (Lambda * Delta) + 0.50001) # Best
     B_bar = (1/Lambda * (Lambda_bar-Identity))[..., None] * B_tilde
     return Lambda_bar, B_bar
 

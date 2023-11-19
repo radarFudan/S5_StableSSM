@@ -74,14 +74,24 @@ def main():
 
     ckpt_dir = osp.join(config.output_dir, 'checkpoints')
 
+
+    p_train_step = jax.pmap(partial(train_step, vocab_size=config.vocab_size), axis_name='batch')
+
+    if config.dataset in ["wikitext103"]:
+        p_eval_step = jax.pmap(partial(eval_step, vocab_size=config.vocab_size), axis_name='batch')
+    elif config.dataset in ["icl_synthetics"]:
+        p_eval_step = jax.pmap(partial(eval_step_synthetic, vocab_size=config.vocab_size), axis_name='batch')
+    else:
+        raise NotImplementedError("Dataset not implemented")
+
     rngs = random.split(rng, jax.local_device_count())
     while iteration <= config.total_steps:
         iteration, state, rngs = train(iteration, log_metrics, state, train_loader,
-                                       schedule_fn, rngs, ckpt_dir)
+                                       schedule_fn, rngs, ckpt_dir, p_train_step)
 
-        validate(iteration, state, val_loader, val=True)
+        validate(iteration, state, val_loader, val=True, p_eval_step=p_eval_step)
 
-        validate(iteration, state, test_loader)
+        validate(iteration, state, test_loader, p_eval_step=p_eval_step)
 
 
 def train_step(batch, state, rng, vocab_size):
@@ -122,12 +132,11 @@ def train_step(batch, state, rng, vocab_size):
     return new_state, return_dict[1], new_rng
 
 
-def train(iteration, log_metrics, state, train_loader, schedule_fn, rngs, ckpt_dir):
+def train(iteration, log_metrics, state, train_loader, schedule_fn, rngs, ckpt_dir, p_train_step):
     progress = ProgressMeter(config.total_steps,
                              ['time', 'data'] + log_metrics)
 
     num_devices = jax.local_device_count()
-    p_train_step = jax.pmap(partial(train_step, vocab_size=config.vocab_size), axis_name='batch')
 
     end = time.time()
     for batch in train_loader:
@@ -215,19 +224,12 @@ def eval_step_synthetic(batch, state, vocab_size):
     return loss, accuracy
 
 
-def validate(iteration, state, test_loader, val=False):
+def validate(iteration, state, test_loader, val=False, p_eval_step=None):
     losses = jnp.array([])
     accs = jnp.array([])
 
     # Todo: may need to change for multinode
     num_devices = jax.local_device_count()
-
-    if config.dataset in ["wikitext103"]:
-        p_eval_step = jax.pmap(partial(eval_step, vocab_size=config.vocab_size), axis_name='batch')
-    elif config.dataset in ["icl_synthetics"]:
-        p_eval_step = jax.pmap(partial(eval_step_synthetic, vocab_size=config.vocab_size), axis_name='batch')
-    else:
-        raise NotImplementedError("Dataset not implemented")
 
     for batch in test_loader:
         inputs = jnp.array(batch[0].numpy())
