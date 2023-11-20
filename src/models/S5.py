@@ -25,8 +25,9 @@ def discretize_zoh(Lambda, B_tilde, Delta):
     """
     Identity = np.ones(Lambda.shape[0])
     # Lambda_bar = np.exp(Lambda * Delta) # exp
-    Lambda_bar = Lambda * Delta # direct or no_clip
+    # Lambda_bar = Lambda * Delta # direct or no_clip
     # Lambda_bar = 1 - 1 / ((Lambda * Delta) * (Lambda * Delta) + 0.50001) # Best
+    Lambda_bar = (1 + Lambda * Delta) / (1 - Lambda * Delta) # Best v1
     B_bar = (1/Lambda * (Lambda_bar-Identity))[..., None] * B_tilde
     return Lambda_bar, B_bar
 
@@ -357,10 +358,10 @@ class S5Operator(nn.Module):
         assert self.order >= 2, f'Order must be at least 2, (got {self.order})'
         total_width = self.d_model * self.inner_factor * (self.order + 1)
 
-        self.short_filter = nn.Conv(total_width,
-                                    [self.short_filter_order],
-                                    feature_group_count=total_width,
-                                    padding=self.short_filter_order - 1)
+        # self.short_filter = nn.Conv(total_width,
+        #                             [self.short_filter_order],
+        #                             feature_group_count=total_width,
+        #                             padding=self.short_filter_order - 1)
 
         if self.filter_cls == 'hyena_S5':
             # print('Using S5 for filters')
@@ -376,7 +377,8 @@ class S5Operator(nn.Module):
         # u = rearrange(u, 'b l d -> b d l')
 
         # note u is still 'b l d'
-        uc = self.short_filter(u)[:, :l_filter]
+        # uc = self.short_filter(u)[:, :l_filter]
+        uc = u
         # uc is 'b l d'
         uc = rearrange(uc, 'b l d -> b d l')
         uc = rearrange(uc, 'b (ho v) (z l) -> b ho v z l',
